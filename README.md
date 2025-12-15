@@ -1,4 +1,4 @@
-# Hue Control CLI
+# Hue Backup CLI
 
 A Python CLI for programming Philips Hue switches and inspecting the Hue setup. Designed to be used by AI assistants (like Claude Code) as a local tool for home automation tasks, but can also be used directly on the command line.
 
