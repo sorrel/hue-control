@@ -194,28 +194,44 @@ def help_command():
             ]
         ),
         CommandSection(
-            name="STATUS COMMANDS (use cache)",
+            name="STATUS & CONFIGURATION",
             icon="📋",
             commands=[
                 ("setup", "Show bridge configuration and test connection"),
                 ("status", "Bridge overview and statistics"),
+            ]
+        ),
+        CommandSection(
+            name="PHYSICAL DEVICES (Items)",
+            icon="💡",
+            commands=[
                 ("switch-status", "View switches with battery level/state, mappings"),
                 ("switch-status -t", "View switches in table format"),
-                ("button-data", "Show all wall control button programmes"),
-                ("button-data -r <room>", "Show wall controls filtered by room"),
+                ("switches", "View switches with model info organised by room"),
+                ("switches -r <room>", "View switches filtered by room"),
                 ("plugs", "View smart plugs with status and model info"),
                 ("plugs -r <room>", "View plugs filtered by room"),
                 ("lights", "View light bulbs/fixtures with status and model"),
                 ("lights -r <room>", "View lights filtered by room"),
+                ("other", "View other devices (doorbell, chimes, bridge)"),
+                ("other -r <room>", "View other devices filtered by room"),
+                ("all", "View all devices in one unified view"),
+                ("all -r <room>", "View all devices filtered by room"),
+            ]
+        ),
+        CommandSection(
+            name="LOGICAL GROUPS (Scenes & Rooms)",
+            icon="🎭",
+            commands=[
+                ("button-data", "Show all wall control button programmes"),
+                ("button-data -r <room>", "Show wall controls filtered by room"),
+                ("scenes", "List all scenes"),
                 ("scene-details", "Show scenes with light details"),
                 ("scene-details -r <room>", "Show scenes filtered by room"),
+                ("groups", "List all rooms/groups"),
                 ("auto-dynamic", "View auto-dynamic status for all scenes"),
                 ("auto-dynamic -r <room>", "View auto-dynamic filtered by room"),
                 ("bridge-auto", "Show bridge automations (deprecated)"),
-                ("list", "List all lights"),
-                ("scenes", "List all scenes"),
-                ("switches", "List all switches"),
-                ("groups", "List all rooms/groups"),
             ]
         ),
         CommandSection(
