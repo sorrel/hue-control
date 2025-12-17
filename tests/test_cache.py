@@ -27,6 +27,7 @@ def mock_controller():
     controller._devices_cache = []
     controller._buttons_cache = []
     controller._behaviour_instances_cache = []
+    controller._device_power_cache = []
     return controller
 
 
@@ -53,6 +54,7 @@ class TestReloadCache:
         mock_controller.get_devices.return_value = [{'id': 'device1'}]
         mock_controller.get_buttons.return_value = [{'id': 'button1'}]
         mock_controller.get_behaviour_instances.return_value = [{'id': 'behaviour1'}]
+        mock_controller.get_device_power.return_value = [{'id': 'power1'}]
 
         result = reload_cache(mock_controller)
 
@@ -61,6 +63,7 @@ class TestReloadCache:
         assert mock_controller.config['cache']['last_updated'] == "2025-12-11T10:00:00"
         assert len(mock_controller.config['cache']['lights']) == 1
         assert len(mock_controller.config['cache']['rooms']) == 1
+        assert len(mock_controller.config['cache']['device_power']) == 1
         mock_save.assert_called_once_with(mock_controller.config)
 
     @patch('core.cache.save_config')
@@ -68,18 +71,21 @@ class TestReloadCache:
         """Should clear all memory caches before fetching."""
         # Set some initial values
         mock_controller._lights_cache = ['old_data']
+        mock_controller._device_power_cache = ['old_battery_data']
         mock_controller.get_lights.return_value = []
         mock_controller.get_rooms.return_value = []
         mock_controller.get_scenes.return_value = []
         mock_controller.get_devices.return_value = []
         mock_controller.get_buttons.return_value = []
         mock_controller.get_behaviour_instances.return_value = []
+        mock_controller.get_device_power.return_value = []
 
         reload_cache(mock_controller)
 
         # Verify caches were cleared
         assert mock_controller._lights_cache is None
         assert mock_controller._rooms_cache is None
+        assert mock_controller._device_power_cache is None
 
     @patch('core.cache.save_config')
     def test_reload_handles_exception(self, mock_save, mock_controller):
@@ -301,3 +307,105 @@ class TestGetCacheInfo:
         assert info['exists'] is True
         assert info['age_hours'] is None
         assert info['is_stale'] is True
+
+    def test_info_includes_device_power_count(self, mock_controller):
+        """Should include device_power resource count in cache info."""
+        now = datetime.now()
+        mock_controller.config = {
+            'cache': {
+                'last_updated': now.isoformat(),
+                'lights': [],
+                'rooms': [],
+                'scenes': [],
+                'devices': [],
+                'buttons': [],
+                'behaviours': [],
+                'device_power': [
+                    {'id': 'power1', 'power_state': {'battery_level': 85, 'battery_state': 'normal'}},
+                    {'id': 'power2', 'power_state': {'battery_level': 25, 'battery_state': 'low'}},
+                    {'id': 'power3', 'power_state': {'battery_level': 5, 'battery_state': 'critical'}}
+                ]
+            }
+        }
+
+        info = get_cache_info(mock_controller)
+
+        assert info['exists'] is True
+        assert info['counts']['device_power'] == 3
+
+
+class TestDevicePowerCaching:
+    """Test device_power battery data caching functionality."""
+
+    @patch('core.cache.save_config')
+    @patch('core.cache.datetime')
+    def test_reload_fetches_device_power(self, mock_datetime, mock_save, mock_controller):
+        """Should fetch device_power resources during reload."""
+        mock_datetime.now.return_value.isoformat.return_value = "2025-12-17T10:00:00"
+        mock_controller.get_lights.return_value = []
+        mock_controller.get_rooms.return_value = []
+        mock_controller.get_scenes.return_value = []
+        mock_controller.get_devices.return_value = []
+        mock_controller.get_buttons.return_value = []
+        mock_controller.get_behaviour_instances.return_value = []
+        mock_controller.get_device_power.return_value = [
+            {
+                'id': 'power1',
+                'power_state': {
+                    'battery_level': 85,
+                    'battery_state': 'normal'
+                }
+            },
+            {
+                'id': 'power2',
+                'power_state': {
+                    'battery_level': 15,
+                    'battery_state': 'low'
+                }
+            }
+        ]
+
+        result = reload_cache(mock_controller)
+
+        assert result is True
+        assert 'device_power' in mock_controller.config['cache']
+        assert len(mock_controller.config['cache']['device_power']) == 2
+        assert mock_controller.config['cache']['device_power'][0]['id'] == 'power1'
+        assert mock_controller.config['cache']['device_power'][0]['power_state']['battery_level'] == 85
+        assert mock_controller.config['cache']['device_power'][1]['power_state']['battery_state'] == 'low'
+        mock_controller.get_device_power.assert_called_once()
+
+    @patch('core.cache.save_config')
+    def test_reload_battery_states(self, mock_save, mock_controller):
+        """Should cache all three battery states: normal, low, critical."""
+        mock_controller.get_lights.return_value = []
+        mock_controller.get_rooms.return_value = []
+        mock_controller.get_scenes.return_value = []
+        mock_controller.get_devices.return_value = []
+        mock_controller.get_buttons.return_value = []
+        mock_controller.get_behaviour_instances.return_value = []
+        mock_controller.get_device_power.return_value = [
+            {'id': 'p1', 'power_state': {'battery_level': 90, 'battery_state': 'normal'}},
+            {'id': 'p2', 'power_state': {'battery_level': 25, 'battery_state': 'low'}},
+            {'id': 'p3', 'power_state': {'battery_level': 5, 'battery_state': 'critical'}}
+        ]
+
+        reload_cache(mock_controller)
+
+        device_power = mock_controller.config['cache']['device_power']
+        assert len(device_power) == 3
+
+        # Verify normal state
+        normal = [p for p in device_power if p['power_state']['battery_state'] == 'normal']
+        assert len(normal) == 1
+        assert normal[0]['power_state']['battery_level'] == 90
+
+        # Verify low state
+        low = [p for p in device_power if p['power_state']['battery_state'] == 'low']
+        assert len(low) == 1
+        assert low[0]['power_state']['battery_level'] == 25
+
+        # Verify critical state
+        critical = [p for p in device_power if p['power_state']['battery_state'] == 'critical']
+        assert len(critical) == 1
+        assert critical[0]['power_state']['battery_level'] == 5

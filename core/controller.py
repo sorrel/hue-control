@@ -8,9 +8,9 @@ import requests
 from requests.packages.urllib3.exceptions import InsecureRequestWarning
 import click
 import json
+import time
 from datetime import datetime, timedelta
 from pathlib import Path
-from typing import List, Dict, Optional
 
 from core.config import load_config, save_config, load_from_1password
 from core.cache import reload_cache, is_cache_stale, ensure_fresh_cache, get_cache_info
@@ -33,8 +33,8 @@ requests.packages.urllib3.disable_warnings(InsecureRequestWarning)
 class HueController:
     """Manages connection and operations with Philips Hue Bridge using API v2."""
 
-    def __init__(self, use_cache: bool = False, bridge_ip: Optional[str] = None,
-                 api_token: Optional[str] = None):
+    def __init__(self, use_cache: bool = False, bridge_ip: str | None = None,
+                 api_token: str | None = None):
         """Initialise HueController.
 
         Args:
@@ -59,8 +59,9 @@ class HueController:
         self._behaviour_instances_cache = None
         self._lights_cache = None
         self._rooms_cache = None
+        self._device_power_cache = None
 
-    def _get_cached_resource(self, resource_type: str, cache_key: str, endpoint: str) -> List[dict]:
+    def _get_cached_resource(self, resource_type: str, cache_key: str, endpoint: str) -> list[dict]:
         """Generic helper for fetching resources with cache support.
 
         Checks persistent cache first (if use_cache enabled), then memory cache,
@@ -192,7 +193,7 @@ class HueController:
 
         return False
 
-    def _request(self, method: str, endpoint: str, data: Optional[dict] = None) -> Optional[dict]:
+    def _request(self, method: str, endpoint: str, data: dict | None = None) -> dict | None:
         """Make a request to the Hue Bridge API v2."""
         if not self.base_url:
             click.echo("Error: Bridge URL not set. Call connect() first.", err=True)
@@ -279,11 +280,11 @@ class HueController:
             click.echo(f"Unexpected error: {e}")
             return False
 
-    def get_lights(self) -> List[dict]:
+    def get_lights(self) -> list[dict]:
         """Get all lights with their current state (v2 API)."""
         return self._get_cached_resource('_lights_cache', 'lights', '/resource/light')
 
-    def get_light_by_name(self, name: str) -> Optional[dict]:
+    def get_light_by_name(self, name: str) -> dict | None:
         """Get a light by name (case-insensitive). Returns light dict with id."""
         lights = self.get_lights()
         for light in lights:
@@ -291,28 +292,32 @@ class HueController:
                 return light
         return None
 
-    def get_devices(self) -> List[dict]:
+    def get_devices(self) -> list[dict]:
         """Get all devices (v2 API)."""
         return self._get_cached_resource('_devices_cache', 'devices', '/resource/device')
 
-    def get_buttons(self) -> List[dict]:
+    def get_buttons(self) -> list[dict]:
         """Get all button resources (v2 API)."""
         return self._get_cached_resource('_buttons_cache', 'buttons', '/resource/button')
 
-    def get_scenes(self) -> List[dict]:
+    def get_scenes(self) -> list[dict]:
         """Get all scenes (v2 API)."""
         return self._get_cached_resource('_scenes_cache', 'scenes', '/resource/scene')
 
-    def get_behaviour_instances(self) -> List[dict]:
+    def get_behaviour_instances(self) -> list[dict]:
         """Get all behaviour instances - these contain button-to-scene mappings (v2 API)."""
         return self._get_cached_resource('_behaviour_instances_cache', 'behaviours', '/resource/behavior_instance')
 
-    def get_rooms(self) -> List[dict]:
+    def get_device_power(self) -> list[dict]:
+        """Get all device_power resources - contains battery level and state (v2 API)."""
+        return self._get_cached_resource('_device_power_cache', 'device_power', '/resource/device_power')
+
+    def get_rooms(self) -> list[dict]:
         """Get all rooms/groups (v2 API)."""
         return self._get_cached_resource('_rooms_cache', 'rooms', '/resource/room')
 
     @staticmethod
-    def _extract_where_lists_from_config(config: dict) -> List[List[dict]]:
+    def _extract_where_lists_from_config(config: dict) -> list[list[dict]]:
         """Extract all 'where' lists from a behaviour configuration.
 
         Handles multiple locations where room info can be stored:
@@ -346,12 +351,12 @@ class HueController:
 
         return where_lists
 
-    def _extract_rooms_from_where_lists(self, where_lists: List[List[dict]], room_lookup: Dict[str, str]) -> List[str]:
+    def _extract_rooms_from_where_lists(self, where_lists: list[list[dict]], room_lookup: dict[str, str]) -> list[str]:
         """Extract unique room names from where lists.
 
         Args:
             where_lists: List of 'where' lists from behaviour config
-            room_lookup: Dict mapping room IDs to names
+            room_lookup: dict mapping room IDs to names
 
         Returns:
             List of unique room names
@@ -378,7 +383,7 @@ class HueController:
         """Ensure cache is fresh, reload if stale."""
         return ensure_fresh_cache(self, max_age_hours)
 
-    def get_sensors(self) -> Dict:
+    def get_sensors(self) -> dict:
         """Get all switch devices in v1-compatible format for backward compatibility."""
         # Convert v2 devices to v1-like structure
         devices = self.get_devices()
@@ -398,15 +403,29 @@ class HueController:
                 sensor_id = device.get('id', '')
 
             # Get battery info from device_power service
-            battery = None
+            battery_level = None
+            battery_state = None
             power_services = [s for s in device.get('services', []) if s.get('rtype') == 'device_power']
             if power_services:
                 power_rid = power_services[0].get('rid')
-                # Skip battery fetch if using cache (battery data not critical for cached operations)
-                if not self.use_cache and self.api_token:
+
+                # Try cache first
+                if self.use_cache:
+                    device_power_cache = self.config.get('cache', {}).get('device_power', [])
+                    for power_data in device_power_cache:
+                        if power_data.get('id') == power_rid:
+                            power_state = power_data.get('power_state', {})
+                            battery_level = power_state.get('battery_level')
+                            battery_state = power_state.get('battery_state')
+                            break
+
+                # Fall back to live fetch if not in cache
+                if battery_level is None and self.api_token:
                     power_result = self._request('GET', f"/resource/device_power/{power_rid}")
                     if power_result and len(power_result) > 0:
-                        battery = power_result[0].get('power_state', {}).get('battery_level')
+                        power_state = power_result[0].get('power_state', {})
+                        battery_level = power_state.get('battery_level')
+                        battery_state = power_state.get('battery_state')
 
             # Get button state - find the most recently updated button
             buttonevent = None
@@ -440,18 +459,25 @@ class HueController:
                             buttonevent = btn_event
                             lastupdated = btn_updated
 
+            # Build config with battery data
+            config_data = {}
+            if battery_level is not None:
+                config_data['battery'] = battery_level
+            if battery_state is not None:
+                config_data['battery_state'] = battery_state
+
             sensors_dict[sensor_id] = {
                 'name': device.get('metadata', {}).get('name', 'Unknown'),
                 'type': 'ZLLSwitch',
                 'state': {'buttonevent': buttonevent, 'lastupdated': lastupdated} if buttonevent else {},
-                'config': {'battery': battery} if battery else {},
+                'config': config_data,
                 'services': device.get('services', []),
                 'device_id': device.get('id', '')  # Store device ID for room lookup
             }
 
         return sensors_dict
 
-    def get_device_rooms(self) -> Dict[str, List[str]]:
+    def get_device_rooms(self) -> dict[str, list[str]]:
         """Get a mapping of device IDs to room names from behaviour instances."""
         behaviours = self.get_behaviour_instances()
         rooms_list = self.get_rooms()
@@ -482,7 +508,7 @@ class HueController:
 
         return device_rooms
 
-    def get_scene_to_switch_mapping(self) -> Dict[str, List[Dict]]:
+    def get_scene_to_switch_mapping(self) -> dict[str, list[dict]]:
         """Get a mapping of scene IDs to switches/buttons they're programmed on.
 
         Returns dict: {scene_id: [{'device_name': str, 'button': str, 'action': str}, ...]}
@@ -656,7 +682,7 @@ class HueController:
 
         return result is not None
 
-    def create_behaviour_instance(self, config: dict) -> Optional[str]:
+    def create_behaviour_instance(self, config: dict) -> str | None:
         """Create a new behaviour instance (write-through cache example).
 
         Args:
@@ -714,7 +740,7 @@ class HueController:
 
         return result is not None
 
-    def get_button_events(self) -> Dict[str, Dict]:
+    def get_button_events(self) -> dict[str, dict]:
         """Get current button event states from all sensors."""
         sensors = self.get_sensors()
         events = {}

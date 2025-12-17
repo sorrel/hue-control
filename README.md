@@ -25,6 +25,25 @@ uv run python hue_backup.py button-data
 uv run python hue_backup.py program-button "Office dimmer" 1 --scenes "Read,Relax"
 ```
 
+---
+
+> **💡 Tab Completion Available!**
+>
+> Get command and option auto-completion in your shell:
+> ```bash
+> uv run python hue_backup.py install-completion
+> source ~/.zshrc  # or ~/.bashrc for bash
+> ```
+> This creates a convenient `hue` command that works from any directory, so instead of typing `uv run python hue_backup.py`, you can just type:
+> ```bash
+> hue button-data
+> hue switch-status
+> hue <TAB>  # See all commands!
+> ```
+> Supports zsh, bash, and fish. Re-run `install-completion` after adding new commands to update tab completion.
+
+---
+
 ## Key Commands
 
 ### Inspection (read-only)
@@ -282,6 +301,27 @@ Hue Dimmer Switch buttons generate 4-digit codes: `XYYY`
 Example: `1002` = On button, short release
 
 Use `discover` to find your specific event codes. This area not developed/used.
+
+### Battery Status Display
+
+Switches show battery level (percentage) and state from the Hue Bridge:
+
+**Battery States & Icons:**
+- 🔋 **Normal** - Battery healthy (green)
+- ⚠️ **Low** - Replace soon (yellow warning)
+- 🪫 **Critical** - Replace urgently (red)
+
+Battery data is:
+- **Cached** during `reload` for offline inspection
+- **Not compared** in room diffs (ephemeral data)
+- **Shown in:** `switch-status`, `switch-info`, and table formats
+
+Example output:
+```
+🔋 Battery: 85% (normal)
+⚠️  Battery: 25% (low)
+🪫 Battery: 5% (critical)
+```
 
 ## Troubleshooting
 
