@@ -293,3 +293,105 @@ class TestSwitchInfoCommand:
         assert "No switches found matching 'nonexistent'" in result.output
         assert 'sensor ID' in result.output
         assert 'device name' in result.output
+
+
+class TestBatteryDisplay:
+    """Test battery level and state display in inspection commands."""
+
+    @patch('commands.inspection.get_cache_controller')
+    def test_switch_info_battery_normal(self, mock_get_cache):
+        """Test switch-info displays battery with normal state."""
+        mock_controller = Mock()
+        mock_controller.get_sensors.return_value = {
+            '18': {
+                'name': 'Office dimmer',
+                'type': 'ZLLSwitch',
+                'state': {'buttonevent': 1002},
+                'config': {
+                    'battery': 85,
+                    'battery_state': 'normal'
+                }
+            }
+        }
+        mock_controller.button_mappings = {}
+        mock_controller.get_scenes.return_value = []
+        mock_get_cache.return_value = mock_controller
+
+        runner = CliRunner()
+        result = runner.invoke(switch_info_command, ['18', '--no-auto-reload'])
+
+        assert result.exit_code == 0
+        assert 'Battery: 85% (normal)' in result.output
+
+    @patch('commands.inspection.get_cache_controller')
+    def test_switch_info_battery_low(self, mock_get_cache):
+        """Test switch-info displays battery with low state."""
+        mock_controller = Mock()
+        mock_controller.get_sensors.return_value = {
+            '18': {
+                'name': 'Office dimmer',
+                'type': 'ZLLSwitch',
+                'state': {},
+                'config': {
+                    'battery': 25,
+                    'battery_state': 'low'
+                }
+            }
+        }
+        mock_controller.button_mappings = {}
+        mock_controller.get_scenes.return_value = []
+        mock_get_cache.return_value = mock_controller
+
+        runner = CliRunner()
+        result = runner.invoke(switch_info_command, ['18', '--no-auto-reload'])
+
+        assert result.exit_code == 0
+        assert 'Battery: 25% (low)' in result.output
+
+    @patch('commands.inspection.get_cache_controller')
+    def test_switch_info_battery_critical(self, mock_get_cache):
+        """Test switch-info displays battery with critical state."""
+        mock_controller = Mock()
+        mock_controller.get_sensors.return_value = {
+            '18': {
+                'name': 'Office dimmer',
+                'type': 'ZLLSwitch',
+                'state': {},
+                'config': {
+                    'battery': 5,
+                    'battery_state': 'critical'
+                }
+            }
+        }
+        mock_controller.button_mappings = {}
+        mock_controller.get_scenes.return_value = []
+        mock_get_cache.return_value = mock_controller
+
+        runner = CliRunner()
+        result = runner.invoke(switch_info_command, ['18', '--no-auto-reload'])
+
+        assert result.exit_code == 0
+        assert 'Battery: 5% (critical)' in result.output
+
+    @patch('commands.inspection.get_cache_controller')
+    def test_switch_info_no_battery(self, mock_get_cache):
+        """Test switch-info with device that has no battery."""
+        mock_controller = Mock()
+        mock_controller.get_sensors.return_value = {
+            '18': {
+                'name': 'Wall switch',
+                'type': 'ZLLSwitch',
+                'state': {},
+                'config': {}  # No battery data
+            }
+        }
+        mock_controller.button_mappings = {}
+        mock_controller.get_scenes.return_value = []
+        mock_get_cache.return_value = mock_controller
+
+        runner = CliRunner()
+        result = runner.invoke(switch_info_command, ['18', '--no-auto-reload'])
+
+        assert result.exit_code == 0
+        # Should not show battery section at all
+        assert 'Battery:' not in result.output

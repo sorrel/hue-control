@@ -7,6 +7,7 @@ All inspection commands use cached data and can auto-reload stale cache.
 import click
 import json
 import traceback
+from datetime import datetime
 from models.utils import display_width, decode_button_event, create_name_lookup, get_cache_controller
 from core.controller import HueController
 
@@ -19,6 +20,19 @@ BUTTON_LABELS = {
     34: 'DIAL ROTATE',
     35: 'DIAL PRESS',
 }
+
+
+def format_timestamp(iso_timestamp: str) -> str:
+    """Format ISO 8601 timestamp to UK format: DD/MM HH:MM"""
+    if not iso_timestamp or iso_timestamp == 'N/A':
+        return ''
+    try:
+        # Parse ISO 8601 format (e.g., "2025-12-17T14:30:45Z")
+        dt = datetime.fromisoformat(iso_timestamp.replace('Z', '+00:00'))
+        # Format as DD/MM HH:MM (24-hour clock, UK date format)
+        return dt.strftime('%d/%m %H:%M')
+    except (ValueError, AttributeError):
+        return ''
 
 
 @click.command()
@@ -790,12 +804,23 @@ def switch_status_command(table: bool, room: str, auto_reload: bool):
                 config = sensor_data.get('config', {})
 
                 # Battery
-                battery = f"{config['battery']}%" if 'battery' in config else "N/A"
+                battery_level = config.get('battery')
+                battery_state = config.get('battery_state', '').lower()
+
+                if battery_level is not None:
+                    battery = f"{battery_level}%"
+                    if battery_state:
+                        battery += f" ({battery_state})"
+                else:
+                    battery = "N/A"
 
                 # Last event
                 last_event_raw = state.get('buttonevent')
+                last_updated = state.get('lastupdated', '')
                 if last_event_raw and last_event_raw != 'N/A':
-                    last_event = f"{last_event_raw} - {decode_button_event(last_event_raw)}"
+                    timestamp_str = format_timestamp(last_updated)
+                    timestamp_display = f" ({timestamp_str})" if timestamp_str else ""
+                    last_event = f"{decode_button_event(last_event_raw, compact=True)}{timestamp_display}"
                 else:
                     last_event = 'N/A'
 
@@ -807,7 +832,7 @@ def switch_status_command(table: bool, room: str, auto_reload: bool):
                         scene_name = scenes.get(scene_id, {}).get('name', 'Unknown')
                         switch_mappings.append(f"{button_event}→{scene_name}")
 
-                mappings_str = ", ".join(switch_mappings) if switch_mappings else "None"
+                mappings_str = ", ".join(switch_mappings) if switch_mappings else ""
 
                 rows.append({
                     'name': name,
@@ -864,6 +889,10 @@ def switch_status_command(table: bool, room: str, auto_reload: bool):
                 click.echo(row_str)
 
             click.echo()
+            # Show legend
+            click.secho("Event codes: ", fg='cyan', nl=False)
+            click.echo("IP=Initial Press, H=Hold, SR=Short Release, LR=Long Release")
+            click.echo()
         else:
             # Box format (original)
             click.echo()
@@ -879,16 +908,31 @@ def switch_status_command(table: bool, room: str, auto_reload: bool):
                 box_lines.append(f"  ID: {sensor_id}  ")
 
                 # Battery if available
-                if 'battery' in config:
-                    battery = config['battery']
-                    battery_icon = "🔋" if battery > 20 else "🪫"
-                    box_lines.append(f"  {battery_icon} Battery: {battery}%  ")
+                battery_level = config.get('battery')
+                if battery_level is not None:
+                    # Choose icon based on battery_state from API
+                    battery_state = config.get('battery_state', '').lower()
+                    if battery_state == 'critical':
+                        battery_icon = "🪫"  # Empty battery - urgent
+                    elif battery_state == 'low':
+                        battery_icon = "⚠️"  # Warning triangle - attention needed
+                    else:
+                        battery_icon = "🔋"  # Full battery - normal
+
+                    battery_text = f"{battery_level}%"
+                    if battery_state:
+                        battery_text += f" ({battery_state})"
+
+                    box_lines.append(f"  {battery_icon} Battery: {battery_text}  ")
 
                 # Last button event
                 if 'buttonevent' in state:
                     event_code = state['buttonevent']
-                    decoded = decode_button_event(event_code)
-                    box_lines.append(f"  Last event: {event_code} - {decoded}  ")
+                    decoded = decode_button_event(event_code, compact=True)
+                    last_updated = state.get('lastupdated', '')
+                    timestamp_str = format_timestamp(last_updated)
+                    timestamp_display = f" ({timestamp_str})" if timestamp_str else ""
+                    box_lines.append(f"  Last event: {decoded}{timestamp_display}  ")
 
                 # Find configured mappings for this switch
                 switch_mappings = []
@@ -903,9 +947,6 @@ def switch_status_command(table: bool, room: str, auto_reload: bool):
                     box_lines.append("  CLI mappings (for monitor):  ")
                     for btn_event, scene_name in sorted(switch_mappings, key=lambda x: x[0]):
                         box_lines.append(f"    {btn_event} → {scene_name}  ")
-                else:
-                    box_lines.append("  ")
-                    box_lines.append("  No CLI mappings (use 'map' to configure)  ")
 
                 # Calculate box width using display width (accounts for emojis)
                 max_width = max(display_width(line) for line in box_lines)
@@ -921,6 +962,11 @@ def switch_status_command(table: bool, room: str, auto_reload: bool):
                     click.echo(f"│{padded_line}│")
                 click.echo(bottom_border)
                 click.echo()
+
+            # Show legend
+            click.secho("Event codes: ", fg='cyan', nl=False)
+            click.echo("IP=Initial Press, H=Hold, SR=Short Release, LR=Long Release")
+            click.echo()
 
     except Exception as e:
         click.echo(f"Error getting switch status: {e}")
@@ -1033,8 +1079,14 @@ def switch_info_command(sensor_id: str, room: str, auto_reload: bool):
             if 'lastupdated' in state:
                 click.echo(f"  Last updated: {state['lastupdated']}")
 
-            if 'battery' in config:
-                click.echo(f"\nBattery: {config['battery']}%")
+            # Battery information
+            battery_level = config.get('battery')
+            if battery_level is not None:
+                battery_text = f"{battery_level}%"
+                battery_state = config.get('battery_state', '').lower()
+                if battery_state:
+                    battery_text += f" ({battery_state})"
+                click.echo(f"\nBattery: {battery_text}")
 
             # Check for CLI mappings (for monitor command)
             click.echo(f"\nCLI mappings (for monitor command):")

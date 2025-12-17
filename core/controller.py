@@ -59,6 +59,7 @@ class HueController:
         self._behaviour_instances_cache = None
         self._lights_cache = None
         self._rooms_cache = None
+        self._device_power_cache = None
 
     def _get_cached_resource(self, resource_type: str, cache_key: str, endpoint: str) -> list[dict]:
         """Generic helper for fetching resources with cache support.
@@ -307,6 +308,10 @@ class HueController:
         """Get all behaviour instances - these contain button-to-scene mappings (v2 API)."""
         return self._get_cached_resource('_behaviour_instances_cache', 'behaviours', '/resource/behavior_instance')
 
+    def get_device_power(self) -> list[dict]:
+        """Get all device_power resources - contains battery level and state (v2 API)."""
+        return self._get_cached_resource('_device_power_cache', 'device_power', '/resource/device_power')
+
     def get_rooms(self) -> list[dict]:
         """Get all rooms/groups (v2 API)."""
         return self._get_cached_resource('_rooms_cache', 'rooms', '/resource/room')
@@ -398,15 +403,29 @@ class HueController:
                 sensor_id = device.get('id', '')
 
             # Get battery info from device_power service
-            battery = None
+            battery_level = None
+            battery_state = None
             power_services = [s for s in device.get('services', []) if s.get('rtype') == 'device_power']
             if power_services:
                 power_rid = power_services[0].get('rid')
-                # Skip battery fetch if using cache (battery data not critical for cached operations)
-                if not self.use_cache and self.api_token:
+
+                # Try cache first
+                if self.use_cache:
+                    device_power_cache = self.config.get('cache', {}).get('device_power', [])
+                    for power_data in device_power_cache:
+                        if power_data.get('id') == power_rid:
+                            power_state = power_data.get('power_state', {})
+                            battery_level = power_state.get('battery_level')
+                            battery_state = power_state.get('battery_state')
+                            break
+
+                # Fall back to live fetch if not in cache
+                if battery_level is None and self.api_token:
                     power_result = self._request('GET', f"/resource/device_power/{power_rid}")
                     if power_result and len(power_result) > 0:
-                        battery = power_result[0].get('power_state', {}).get('battery_level')
+                        power_state = power_result[0].get('power_state', {})
+                        battery_level = power_state.get('battery_level')
+                        battery_state = power_state.get('battery_state')
 
             # Get button state - find the most recently updated button
             buttonevent = None
@@ -440,11 +459,18 @@ class HueController:
                             buttonevent = btn_event
                             lastupdated = btn_updated
 
+            # Build config with battery data
+            config_data = {}
+            if battery_level is not None:
+                config_data['battery'] = battery_level
+            if battery_state is not None:
+                config_data['battery_state'] = battery_state
+
             sensors_dict[sensor_id] = {
                 'name': device.get('metadata', {}).get('name', 'Unknown'),
                 'type': 'ZLLSwitch',
                 'state': {'buttonevent': buttonevent, 'lastupdated': lastupdated} if buttonevent else {},
-                'config': {'battery': battery} if battery else {},
+                'config': config_data,
                 'services': device.get('services', []),
                 'device_id': device.get('id', '')  # Store device ID for room lookup
             }

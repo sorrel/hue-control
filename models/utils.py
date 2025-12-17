@@ -28,12 +28,16 @@ def display_width(text: str) -> int:
     return width
 
 
-def decode_button_event(event_code: int) -> str:
+def decode_button_event(event_code: int, compact: bool = False) -> str:
     """Decode a Hue button event code into human-readable format.
 
     Format: XYYY where X is button number, YYY is event type
     Button: 1=On, 2=Dim Up, 3=Dim Down, 4=Off, 5=Special
     Event: 000=Initial Press, 001=Hold, 002=Short Release, 003=Long Release
+
+    Args:
+        event_code: The numeric event code
+        compact: If True, use abbreviated format (e.g., "On SR" instead of "On (Short Release)")
     """
     if not event_code:
         return "Unknown"
@@ -59,21 +63,35 @@ def decode_button_event(event_code: int) -> str:
         '003': 'Long Release',
     }
 
+    event_map_compact = {
+        '000': 'IP',
+        '001': 'H',
+        '002': 'SR',
+        '003': 'LR',
+    }
+
     # Handle tap dial special cases
     if event_str.startswith('34') or event_str.startswith('35'):
         button = event_str[:2]
         event = event_str[2:]
         button_name = button_map.get(button, button)
-        event_type = event_map.get(event, event)
-        return f"{button_name} ({event_type})"
+        if compact:
+            event_type = event_map_compact.get(event, event)
+            return f"{button_name} {event_type}"
+        else:
+            event_type = event_map.get(event, event)
+            return f"{button_name} ({event_type})"
 
     button = event_str[0]
     event = event_str[1:]
 
     button_name = button_map.get(button, f"Button {button}")
-    event_type = event_map.get(event, event)
-
-    return f"{button_name} ({event_type})"
+    if compact:
+        event_type = event_map_compact.get(event, event)
+        return f"{button_name} {event_type}"
+    else:
+        event_type = event_map.get(event, event)
+        return f"{button_name} ({event_type})"
 
 
 def create_name_lookup(resources: list[dict]) -> dict[str, str]:

@@ -199,8 +199,8 @@ def help_command():
             commands=[
                 ("setup", "Show bridge configuration and test connection"),
                 ("status", "Bridge overview and statistics"),
-                ("switch-status", "View all switches with mappings (boxed)"),
-                ("switch-status -t", "View all switches with mappings (table)"),
+                ("switch-status", "View switches with battery level/state, mappings"),
+                ("switch-status -t", "View switches in table format"),
                 ("button-data", "Show all wall control button programmes"),
                 ("button-data -r <room>", "Show wall controls filtered by room"),
                 ("scene-details", "Show scenes with light details"),

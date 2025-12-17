@@ -115,12 +115,13 @@ def cache_info_command():
     click.secho("Cached Resources:", fg='cyan')
     counts = info['counts']
     if counts:
-        click.echo(f"  Lights:      {counts.get('lights', 0)}")
-        click.echo(f"  Rooms:       {counts.get('rooms', 0)}")
-        click.echo(f"  Scenes:      {counts.get('scenes', 0)}")
-        click.echo(f"  Devices:     {counts.get('devices', 0)}")
-        click.echo(f"  Buttons:     {counts.get('buttons', 0)}")
-        click.echo(f"  Behaviours:  {counts.get('behaviours', 0)}")
+        click.echo(f"  Lights:       {counts.get('lights', 0)}")
+        click.echo(f"  Rooms:        {counts.get('rooms', 0)}")
+        click.echo(f"  Scenes:       {counts.get('scenes', 0)}")
+        click.echo(f"  Devices:      {counts.get('devices', 0)}")
+        click.echo(f"  Buttons:      {counts.get('buttons', 0)}")
+        click.echo(f"  Behaviours:   {counts.get('behaviours', 0)}")
+        click.echo(f"  Device Power: {counts.get('device_power', 0)}")
 
     click.echo()
     click.echo(f"Cache file: {CONFIG_FILE}")

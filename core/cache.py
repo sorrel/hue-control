@@ -36,6 +36,7 @@ def reload_cache(controller: 'HueController') -> bool:
     controller._devices_cache = None
     controller._buttons_cache = None
     controller._behaviour_instances_cache = None
+    controller._device_power_cache = None
 
     try:
         # Fetch all resources
@@ -45,6 +46,7 @@ def reload_cache(controller: 'HueController') -> bool:
         devices = controller.get_devices()
         buttons = controller.get_buttons()
         behaviours = controller.get_behaviour_instances()
+        device_power = controller.get_device_power()
 
         # Save to persistent cache
         controller.config['cache'] = {
@@ -55,6 +57,7 @@ def reload_cache(controller: 'HueController') -> bool:
             'devices': devices,
             'buttons': buttons,
             'behaviours': behaviours,
+            'device_power': device_power,
         }
 
         save_config(controller.config)
@@ -65,6 +68,7 @@ def reload_cache(controller: 'HueController') -> bool:
         click.echo(f"✓ Cached {len(devices)} devices")
         click.echo(f"✓ Cached {len(buttons)} buttons")
         click.echo(f"✓ Cached {len(behaviours)} behaviour instances")
+        click.echo(f"✓ Cached {len(device_power)} device power resources")
         click.echo(f"\nCache saved to {CONFIG_FILE}")
 
         return True
@@ -174,5 +178,6 @@ def get_cache_info(controller: 'HueController') -> dict:
             'devices': len(cache_data.get('devices', [])),
             'buttons': len(cache_data.get('buttons', [])),
             'behaviours': len(cache_data.get('behaviours', [])),
+            'device_power': len(cache_data.get('device_power', [])),
         }
     }

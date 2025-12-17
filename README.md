@@ -283,6 +283,27 @@ Example: `1002` = On button, short release
 
 Use `discover` to find your specific event codes. This area not developed/used.
 
+### Battery Status Display
+
+Switches show battery level (percentage) and state from the Hue Bridge:
+
+**Battery States & Icons:**
+- 🔋 **Normal** - Battery healthy (green)
+- ⚠️ **Low** - Replace soon (yellow warning)
+- 🪫 **Critical** - Replace urgently (red)
+
+Battery data is:
+- **Cached** during `reload` for offline inspection
+- **Not compared** in room diffs (ephemeral data)
+- **Shown in:** `switch-status`, `switch-info`, and table formats
+
+Example output:
+```
+🔋 Battery: 85% (normal)
+⚠️  Battery: 25% (low)
+🪫 Battery: 5% (critical)
+```
+
 ## Troubleshooting
 
 **Can't connect?**
