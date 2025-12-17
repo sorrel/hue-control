@@ -52,6 +52,14 @@ uv run python hue_backup.py program-button "Office dimmer" 1 --scenes "Read,Rela
 button-data              # What's programmed into all wall controls (PRIMARY)
 button-data -r "Living"  # Filter by room
 switch-status            # All switches with battery, last event, mappings
+plugs                    # Smart plugs with status and model info (table view)
+plugs -r "Living"        # Filter plugs by room
+lights                   # Light bulbs/fixtures with status and model info (table view)
+lights -r "Living"       # Filter lights by room
+other                    # Other devices (doorbell, chimes, bridge, etc.)
+other -r "Hallway"       # Filter other devices by room
+all                      # All devices in one unified view
+all -r "Living"          # Filter all devices by room
 scene-details            # Scenes with light configurations
 scenes                   # List all scenes
 switches                 # List all switches

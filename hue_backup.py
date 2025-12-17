@@ -46,7 +46,6 @@ from commands.room import save_room_command, diff_room_command, restore_room_com
 from commands.inspection import (
     scene_details_command,
     status_command,
-    list_lights_command,
     groups_command,
     scenes_command,
     switches_command,
@@ -54,7 +53,11 @@ from commands.inspection import (
     button_data_command,
     bridge_auto_command,
     switch_status_command,
-    switch_info_command
+    switch_info_command,
+    plugs_command,
+    lights_command,
+    other_command,
+    all_devices_command
 )
 from commands.control import (
     power_command,
@@ -156,7 +159,6 @@ _hue_commands() {{
         'restore-room:Restore room configuration from a saved backup'
         'scene-details:Show detailed scene information from cache'
         'status:Get overall bridge status and configuration summary'
-        'list:List all lights and their current state'
         'groups:List all groups/rooms'
         'scenes:List all available scenes'
         'switches:List all switches and sensors'
@@ -165,6 +167,10 @@ _hue_commands() {{
         'bridge-auto:Show bridge-configured button automations'
         'switch-status:Display switch status with CLI mappings'
         'switch-info:Get detailed information about switches'
+        'plugs:Display smart plug status (on/off by room)'
+        'lights:Display light bulbs and fixtures (on/off by room)'
+        'other:Display other devices (doorbell, chimes, bridge)'
+        'all:Display all devices in one view (switches, plugs, lights, other)'
         'power:Turn a light ON or OFF'
         'brightness:Set brightness of a light'
         'colour:Set colour or temperature of a light'
@@ -213,7 +219,7 @@ compdef _hue hue
     COMPREPLY=()
     cur="${COMP_WORDS[COMP_CWORD]}"
     prev="${COMP_WORDS[COMP_CWORD-1]}"
-    commands="help setup configure reload cache-info save-room diff-room restore-room scene-details status list groups scenes switches debug-buttons button-data bridge-auto switch-status switch-info power brightness colour activate-scene auto-dynamic map mappings discover monitor program-button install-completion show-completion"
+    commands="help setup configure reload cache-info save-room diff-room restore-room scene-details status groups scenes switches debug-buttons button-data bridge-auto switch-status switch-info plugs lights other all power brightness colour activate-scene auto-dynamic map mappings discover monitor program-button install-completion show-completion"
 
     if [[ ${COMP_CWORD} == 1 ]]; then
         COMPREPLY=( $(compgen -W "${commands}" -- ${cur}) )
@@ -345,7 +351,6 @@ cli.add_command(restore_room_command)
 # Register inspection commands
 cli.add_command(scene_details_command, name='scene-details')
 cli.add_command(status_command, name='status')
-cli.add_command(list_lights_command)  # Uses 'list' name defined in decorator
 cli.add_command(groups_command, name='groups')
 cli.add_command(scenes_command, name='scenes')
 cli.add_command(switches_command, name='switches')
@@ -354,6 +359,10 @@ cli.add_command(button_data_command, name='button-data')
 cli.add_command(bridge_auto_command, name='bridge-auto')
 cli.add_command(switch_status_command, name='switch-status')
 cli.add_command(switch_info_command, name='switch-info')
+cli.add_command(plugs_command, name='plugs')
+cli.add_command(lights_command, name='lights')
+cli.add_command(other_command, name='other')
+cli.add_command(all_devices_command, name='all')
 
 # Register control commands
 cli.add_command(power_command, name='power')
