@@ -34,13 +34,13 @@ uv run python hue_backup.py program-button "Office dimmer" 1 --scenes "Read,Rela
 > uv run python hue_backup.py install-completion
 > source ~/.zshrc  # or ~/.bashrc for bash
 > ```
-> This creates a convenient `hue` alias, so instead of typing `uv run python hue_backup.py`, you can just type:
+> This creates a convenient `hue` command that works from any directory, so instead of typing `uv run python hue_backup.py`, you can just type:
 > ```bash
 > hue button-data
 > hue switch-status
 > hue <TAB>  # See all commands!
 > ```
-> Supports zsh, bash, and fish.
+> Supports zsh, bash, and fish. Re-run `install-completion` after adding new commands to update tab completion.
 
 ---
 

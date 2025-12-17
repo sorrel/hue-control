@@ -102,13 +102,18 @@ Use 'COMMAND -h' or 'COMMAND --help' for detailed help on a specific command."""
 def install_completion_command(shell):
     """Install shell completion for this tool.
 
-    Generates a completion script and adds it to your shell config.
+    Creates a 'hue' command that works from any directory and enables tab-completion.
     Run this once after installation. Re-run to update when commands change.
 
     \b
     Examples:
       uv run python hue_backup.py install-completion        # Auto-detect shell
       uv run python hue_backup.py install-completion --shell zsh
+
+    \b
+    After installation:
+      hue button-data           # Works from anywhere
+      hue <TAB>                 # Tab-completion for all commands
     """
     # Auto-detect shell if not specified
     if shell is None:
