@@ -203,6 +203,8 @@ def help_command():
                 ("switch-status -t", "View switches in table format"),
                 ("button-data", "Show all wall control button programmes"),
                 ("button-data -r <room>", "Show wall controls filtered by room"),
+                ("plugs", "View smart plugs with status and model info"),
+                ("plugs -r <room>", "View plugs filtered by room"),
                 ("scene-details", "Show scenes with light details"),
                 ("scene-details -r <room>", "Show scenes filtered by room"),
                 ("auto-dynamic", "View auto-dynamic status for all scenes"),
