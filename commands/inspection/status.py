@@ -20,7 +20,7 @@ def status_command(auto_reload: bool):
         return
 
     try:
-        click.echo("\n=== Bridge Status ===\n")
+        click.secho("\n=== Bridge Status ===\n", fg='cyan', bold=True)
 
         # Count resources from cache
         lights = cache_controller.get_lights()
