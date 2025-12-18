@@ -240,7 +240,7 @@ uv run pytest tests/test_button_config.py -v
 ```
 
 **Test Coverage:**
-- 115 total tests (71 original + 44 new)
+- Over 100 tests
 - All tests use mocks (no actual API calls or file writes)
 - Test files:
   - `test_structure.py` - Directory and file structure
@@ -255,7 +255,7 @@ uv run pytest tests/test_button_config.py -v
 
 ### Behaviour Instance Formats
 
-The `program-button` command supports both Hue API formats:
+The `program-button` command supports both Hue API formats, but prefers the new:
 
 **Old format** (button1/button2/button3/button4):
 ```json
