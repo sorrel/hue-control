@@ -17,10 +17,12 @@ def display_width(text: str) -> int:
     """
     width = 0
     for char in text:
-        # Common emojis and symbols that take 2 columns
-        if char in '🔋🪫→':
+        if char in '🎚️🎛️':
+            width += 1
+        # Rightwards arrow (used in diff output) displays as 2 columns
+        elif char == '→':
             width += 2
-        # Most emoji characters are in these ranges
+        # Otherwise emoji characters are in these ranges
         elif ord(char) > 0x1F300:
             width += 2
         else:
