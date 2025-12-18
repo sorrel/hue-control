@@ -347,21 +347,6 @@ uv run python hue_backup.py reload  # Force cache refresh
 **1Password not working?**
 Falls back to local config automatically. Check `op signin` if you want 1Password.
 
-## Recent Updates
-
-### 2025-12-14: Button Programming Command
-
-- **NEW: `program-button` command** - Programmatically modify button configurations
-- **Complete seasonal workflow** - save → programme → diff → restore
-- **All action types supported** - Scene cycles, time-based schedules, single scenes, dimming, long press
-- **Fuzzy matching** - Partial switch/scene names work automatically
-- **Dual format support** - Handles both old (button1/button2) and new (buttons dict) API formats
-- **Write-through cache** - Local state stays synchronized after modifications
-- **44 new tests** - 115 total tests, all passing
-- **3 new modules** - `models/button_config.py`, `tests/test_button_config.py`, enhanced utilities
-
-See "Programming Buttons" section above for usage examples.
-
 ## Notes
 
 - API keys don't expire (one-time setup)
