@@ -48,7 +48,6 @@ def reload_command():
         click.echo(f"  Last updated: {last_updated}")
     else:
         click.secho("✗ Failed to reload cache", fg='red')
-
     click.echo()
 
 
@@ -130,6 +129,4 @@ def cache_info_command():
             value = counts.get(key, 0)
             click.echo(f"  {label:<{max_label_len}} {value:>{max_num_len}}")
 
-    click.echo()
-    click.echo(f"Cache file: {CONFIG_FILE}")
-    click.echo() 
+    click.echo(f"\n{click.style('Cache file:', fg='cyan')} {CONFIG_FILE}\n")
