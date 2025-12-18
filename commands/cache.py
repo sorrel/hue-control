@@ -48,7 +48,6 @@ def reload_command():
         click.echo(f"  Last updated: {last_updated}")
     else:
         click.secho("✗ Failed to reload cache", fg='red')
-
     click.echo()
 
 
@@ -109,21 +108,25 @@ def cache_info_command():
         else:
             click.echo(f"Status:       {click.style('Fresh', fg='green')}")
 
-    click.echo()
-
-    # Show counts
-    click.secho("Cached Resources:", fg='cyan')
+    click.secho("\nCached Resources:", fg='cyan')
     counts = info['counts']
-    if counts:
-        click.echo(f"  Lights:       {counts.get('lights', 0)}")
-        click.echo(f"  Rooms:        {counts.get('rooms', 0)}")
-        click.echo(f"  Zones:        {counts.get('zones', 0)}")
-        click.echo(f"  Scenes:       {counts.get('scenes', 0)}")
-        click.echo(f"  Devices:      {counts.get('devices', 0)}")
-        click.echo(f"  Buttons:      {counts.get('buttons', 0)}")
-        click.echo(f"  Behaviours:   {counts.get('behaviours', 0)}")
-        click.echo(f"  Device Power: {counts.get('device_power', 0)}")
+    if counts:    
+        # Build a list of (label, key) pairs
+        items = [("Lights", "lights"),
+                 ("Rooms", "rooms"),
+                 ("Zones", "zones"),
+                 ("Scenes", "scenes"),
+                 ("Devices", "devices"),
+                 ("Buttons", "buttons"),
+                 ("Behaviours", "behaviours"),
+                 ("Device Power", "device_power")]    
 
-    click.echo()
-    click.echo(f"Cache file: {CONFIG_FILE}")
-    click.echo()
+        # Find longest label and widest number
+        max_label_len = max(len(label) for label, _ in items)
+        max_num_len = max(len(str(counts.get(key, 0))) for _, key in items)
+        # Print with both aligned
+        for label, key in items:
+            value = counts.get(key, 0)
+            click.echo(f"  {label:<{max_label_len}} {value:>{max_num_len}}")
+
+    click.echo(f"\n{click.style('Cache file:', fg='cyan')} {CONFIG_FILE}\n")
