@@ -64,10 +64,37 @@ class TestParseTimeSlot:
 class TestValidateProgramButtonArgs:
     """Test argument validation."""
 
-    def test_no_actions_specified(self):
-        """No actions should fail validation."""
+    def test_no_actions_specified_button_1(self):
+        """No actions on button 1 should fail validation."""
         is_valid, msg = validate_program_button_args(
-            scenes=None, time_based=False, slot=(), scene=None,
+            button_number=1, scenes=None, time_based=False, slot=(), scene=None,
+            dim_up=False, dim_down=False, long_press=None
+        )
+        assert not is_valid
+        assert "Must specify at least one action" in msg
+
+    def test_no_actions_specified_button_2(self):
+        """No actions on button 2 should pass (auto-detects dim_up)."""
+        is_valid, msg = validate_program_button_args(
+            button_number=2, scenes=None, time_based=False, slot=(), scene=None,
+            dim_up=False, dim_down=False, long_press=None
+        )
+        assert is_valid
+        assert msg is None
+
+    def test_no_actions_specified_button_3(self):
+        """No actions on button 3 should pass (auto-detects dim_down)."""
+        is_valid, msg = validate_program_button_args(
+            button_number=3, scenes=None, time_based=False, slot=(), scene=None,
+            dim_up=False, dim_down=False, long_press=None
+        )
+        assert is_valid
+        assert msg is None
+
+    def test_no_actions_specified_button_4(self):
+        """No actions on button 4 should fail validation."""
+        is_valid, msg = validate_program_button_args(
+            button_number=4, scenes=None, time_based=False, slot=(), scene=None,
             dim_up=False, dim_down=False, long_press=None
         )
         assert not is_valid
@@ -76,7 +103,7 @@ class TestValidateProgramButtonArgs:
     def test_multiple_short_press_actions(self):
         """Multiple short-press actions should fail validation."""
         is_valid, msg = validate_program_button_args(
-            scenes="A,B", time_based=False, slot=(), scene="C",
+            button_number=1, scenes="A,B", time_based=False, slot=(), scene="C",
             dim_up=False, dim_down=False, long_press=None
         )
         assert not is_valid
@@ -85,7 +112,7 @@ class TestValidateProgramButtonArgs:
     def test_time_based_without_slots(self):
         """Time-based without slots should fail validation."""
         is_valid, msg = validate_program_button_args(
-            scenes=None, time_based=True, slot=(), scene=None,
+            button_number=1, scenes=None, time_based=True, slot=(), scene=None,
             dim_up=False, dim_down=False, long_press=None
         )
         assert not is_valid
@@ -94,7 +121,7 @@ class TestValidateProgramButtonArgs:
     def test_slots_without_time_based(self):
         """Slots without time-based flag should fail validation."""
         is_valid, msg = validate_program_button_args(
-            scenes=None, time_based=False, slot=("07:00=Morning",), scene=None,
+            button_number=1, scenes=None, time_based=False, slot=("07:00=Morning",), scene=None,
             dim_up=False, dim_down=False, long_press=None
         )
         assert not is_valid
@@ -103,7 +130,7 @@ class TestValidateProgramButtonArgs:
     def test_scenes_with_only_one_scene(self):
         """Scenes with only one scene should fail validation."""
         is_valid, msg = validate_program_button_args(
-            scenes="OnlyOne", time_based=False, slot=(), scene=None,
+            button_number=1, scenes="OnlyOne", time_based=False, slot=(), scene=None,
             dim_up=False, dim_down=False, long_press=None
         )
         assert not is_valid
@@ -112,7 +139,7 @@ class TestValidateProgramButtonArgs:
     def test_both_dim_up_and_dim_down(self):
         """Both dim up and dim down should fail validation."""
         is_valid, msg = validate_program_button_args(
-            scenes=None, time_based=False, slot=(), scene=None,
+            button_number=1, scenes=None, time_based=False, slot=(), scene=None,
             dim_up=True, dim_down=True, long_press=None
         )
         assert not is_valid
@@ -121,7 +148,7 @@ class TestValidateProgramButtonArgs:
     def test_valid_scene_cycle(self):
         """Valid scene cycle should pass validation."""
         is_valid, msg = validate_program_button_args(
-            scenes="A,B,C", time_based=False, slot=(), scene=None,
+            button_number=1, scenes="A,B,C", time_based=False, slot=(), scene=None,
             dim_up=False, dim_down=False, long_press=None
         )
         assert is_valid
@@ -130,7 +157,7 @@ class TestValidateProgramButtonArgs:
     def test_valid_time_based(self):
         """Valid time-based should pass validation."""
         is_valid, msg = validate_program_button_args(
-            scenes=None, time_based=True, slot=("07:00=A", "12:00=B"), scene=None,
+            button_number=1, scenes=None, time_based=True, slot=("07:00=A", "12:00=B"), scene=None,
             dim_up=False, dim_down=False, long_press=None
         )
         assert is_valid
@@ -139,7 +166,7 @@ class TestValidateProgramButtonArgs:
     def test_valid_single_scene(self):
         """Valid single scene should pass validation."""
         is_valid, msg = validate_program_button_args(
-            scenes=None, time_based=False, slot=(), scene="Relax",
+            button_number=1, scenes=None, time_based=False, slot=(), scene="Relax",
             dim_up=False, dim_down=False, long_press=None
         )
         assert is_valid
@@ -148,7 +175,7 @@ class TestValidateProgramButtonArgs:
     def test_valid_long_press_only(self):
         """Valid long press only should pass validation."""
         is_valid, msg = validate_program_button_args(
-            scenes=None, time_based=False, slot=(), scene=None,
+            button_number=1, scenes=None, time_based=False, slot=(), scene=None,
             dim_up=False, dim_down=False, long_press="All Off"
         )
         assert is_valid
@@ -157,7 +184,7 @@ class TestValidateProgramButtonArgs:
     def test_valid_scene_with_long_press(self):
         """Valid scene with long press should pass validation."""
         is_valid, msg = validate_program_button_args(
-            scenes="A,B", time_based=False, slot=(), scene=None,
+            button_number=1, scenes="A,B", time_based=False, slot=(), scene=None,
             dim_up=False, dim_down=False, long_press="All Off"
         )
         assert is_valid
@@ -247,6 +274,7 @@ class TestBuildDimmingConfig:
 
         assert 'on_repeat' in config
         assert config['on_repeat'] == {'action': 'dim_up'}
+        assert 'where' not in config
 
     def test_dim_down(self):
         """Build config for dim down."""
@@ -254,6 +282,25 @@ class TestBuildDimmingConfig:
 
         assert 'on_repeat' in config
         assert config['on_repeat'] == {'action': 'dim_down'}
+        assert 'where' not in config
+
+    def test_dim_up_with_where(self):
+        """Build config for dim up with zone/room specified."""
+        config = build_dimming_config('dim_up', 'zone-id-123', 'zone')
+
+        assert 'on_repeat' in config
+        assert config['on_repeat'] == {'action': 'dim_up'}
+        assert 'where' in config
+        assert config['where'] == [{'group': {'rid': 'zone-id-123', 'rtype': 'zone'}}]
+
+    def test_dim_down_with_where(self):
+        """Build config for dim down with room specified."""
+        config = build_dimming_config('dim_down', 'room-id-456', 'room')
+
+        assert 'on_repeat' in config
+        assert config['on_repeat'] == {'action': 'dim_down'}
+        assert 'where' in config
+        assert config['where'] == [{'group': {'rid': 'room-id-456', 'rtype': 'room'}}]
 
 
 class TestBuildLongPressConfig:
