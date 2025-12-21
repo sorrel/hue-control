@@ -165,11 +165,12 @@ def monitor_command():
 @click.option('--scene', help='Single scene to activate on button press')
 @click.option('--dim-up', is_flag=True, help='Configure button for dim up (hold/repeat action)')
 @click.option('--dim-down', is_flag=True, help='Configure button for dim down (hold/repeat action)')
+@click.option('--where', help='Zone or room name to control (for dim-up/dim-down buttons)')
 @click.option('--long-press', help='Scene name or action for long press (e.g., "All Off", "Home Off", or scene name)')
 @click.option('--yes', '-y', is_flag=True, help='Skip confirmation prompt')
 @click.option('--auto-reload/--no-auto-reload', default=True, help='Auto-reload stale cache (default: yes)')
 def program_button_command(switch_name, button_number, scenes, time_based, slot,
-                           scene, dim_up, dim_down, long_press, yes, auto_reload):
+                           scene, dim_up, dim_down, where, long_press, yes, auto_reload):
     """Programme a button on a Hue switch to perform an action.
 
     This modifies the bridge-native button configuration (not local CLI mappings).
@@ -199,6 +200,10 @@ def program_button_command(switch_name, button_number, scenes, time_based, slot,
       # Dimming actions
       uv run python hue_backup.py program-button "Office dimmer" 2 --dim-up
       uv run python hue_backup.py program-button "Office dimmer" 3 --dim-down
+
+      # Dimming with zone control (change which lights the dim buttons control)
+      uv run python hue_backup.py program-button "Office dimmer" 2 --dim-up --where "Upstairs"
+      uv run python hue_backup.py program-button "Office dimmer" 3 --dim-down --where "Upstairs"
 
       # Long press
       uv run python hue_backup.py program-button "Office dimmer" 1 \\
@@ -234,30 +239,77 @@ def program_button_command(switch_name, button_number, scenes, time_based, slot,
         all_switches = get_all_switch_names(cache_controller)
 
         if not any(switch_name.lower() in s.lower() for s in all_switches):
-            # No matches
-            click.secho(f"✗ Switch '{switch_name}' not found", fg='red')
+            # No programmed switches match - check if unprogrammed device exists
+            from models.button_config import create_initial_behaviour_for_device
 
-            # Show similar switches
-            similar = find_similar_strings(switch_name, all_switches, limit=3)
-            if similar:
-                click.echo("\nDid you mean one of these?")
-                for name in similar:
-                    click.secho(f"  • {name}", fg='green')
+            devices = cache_controller.get_devices()
+            matching_devices = [
+                d for d in devices
+                if switch_name.lower() in d.get('metadata', {}).get('name', '').lower()
+            ]
+
+            if len(matching_devices) == 1:
+                # Found unprogrammed device - create initial behaviour
+                device = matching_devices[0]
+                device_name = device.get('metadata', {}).get('name', '')
+
+                click.secho(f"\n⚠ '{device_name}' has not been programmed yet", fg='yellow')
+                click.echo("Creating initial behaviour instance...")
+                click.echo()
+
+                # Create a write controller for the initial behaviour
+                write_controller = HueController()
+                if not write_controller.connect():
+                    return
+
+                new_behaviour_id = create_initial_behaviour_for_device(device, write_controller)
+                if not new_behaviour_id:
+                    return  # Error already displayed
+
+                # Reload cache to get the new behaviour
+                click.echo("Reloading cache...")
+                cache_controller.reload_all_data()
+
+                # Try finding the switch again
+                result = find_switch_behaviour(switch_name, cache_controller)
+                if not result:
+                    click.secho("\n✗ Failed to find newly created behaviour", fg='red')
+                    return
+
+                click.echo()
+            elif len(matching_devices) > 1:
+                # Multiple unprogrammed devices match
+                click.secho(f"✗ Multiple devices match '{switch_name}':", fg='red')
+                for d in matching_devices:
+                    name = d.get('metadata', {}).get('name', '')
+                    click.secho(f"  • {name}", fg='yellow')
+                click.echo("\nPlease be more specific.")
+                return
             else:
-                click.echo("\nAvailable switches:")
-                for name in all_switches[:10]:
-                    click.secho(f"  • {name}", fg='green')
-                if len(all_switches) > 10:
-                    click.echo(f"  ... and {len(all_switches) - 10} more")
+                # No matches at all
+                click.secho(f"✗ Switch '{switch_name}' not found", fg='red')
+
+                # Show similar switches
+                similar = find_similar_strings(switch_name, all_switches, limit=3)
+                if similar:
+                    click.echo("\nDid you mean one of these?")
+                    for name in similar:
+                        click.secho(f"  • {name}", fg='green')
+                else:
+                    click.echo("\nAvailable switches:")
+                    for name in all_switches[:10]:
+                        click.secho(f"  • {name}", fg='green')
+                    if len(all_switches) > 10:
+                        click.echo(f"  ... and {len(all_switches) - 10} more")
+                return
         else:
-            # Multiple matches
+            # Multiple programmed switches match
             matches = [s for s in all_switches if switch_name.lower() in s.lower()]
             click.secho(f"✗ Multiple switches match '{switch_name}':", fg='red')
             for name in matches:
                 click.secho(f"  • {name}", fg='yellow')
             click.echo("\nPlease be more specific.")
-
-        return
+            return
 
     # Extract from SwitchBehaviour TypedDict
     behaviour = result['behaviour']
@@ -321,12 +373,100 @@ def program_button_command(switch_name, button_number, scenes, time_based, slot,
         short_press_desc = f"Activate scene: {scene}"
 
     elif dim_up:
-        button_config.update(build_dimming_config('dim_up'))
-        short_press_desc = "Dim up (hold to brighten)"
+        # Resolve zone/room for dimming if specified
+        where_rid, where_rtype, where_name = None, None, None
+        if where:
+            # Try zones first - prefer exact matches
+            zones = cache_controller.get_zones()
+            exact_match = None
+            substring_match = None
+
+            for zone in zones:
+                zone_name = zone.get('metadata', {}).get('name', '')
+                if where.lower() == zone_name.lower():
+                    exact_match = (zone['id'], 'zone', zone_name)
+                    break
+                elif where.lower() in zone_name.lower() and not substring_match:
+                    substring_match = (zone['id'], 'zone', zone_name)
+
+            if exact_match:
+                where_rid, where_rtype, where_name = exact_match
+            elif substring_match:
+                where_rid, where_rtype, where_name = substring_match
+
+            # Try rooms if not found in zones
+            if not where_rid:
+                rooms = cache_controller.get_rooms()
+                exact_match = None
+                substring_match = None
+
+                for room in rooms:
+                    room_name = room.get('metadata', {}).get('name', '')
+                    if where.lower() == room_name.lower():
+                        exact_match = (room['id'], 'room', room_name)
+                        break
+                    elif where.lower() in room_name.lower() and not substring_match:
+                        substring_match = (room['id'], 'room', room_name)
+
+                if exact_match:
+                    where_rid, where_rtype, where_name = exact_match
+                elif substring_match:
+                    where_rid, where_rtype, where_name = substring_match
+
+            if not where_rid:
+                click.secho(f"✗ Zone/room '{where}' not found", fg='red')
+                return
+
+        button_config.update(build_dimming_config('dim_up', where_rid, where_rtype))
+        short_press_desc = f"Dim up (hold to brighten){f' - {where_name}' if where_name else ''}"
 
     elif dim_down:
-        button_config.update(build_dimming_config('dim_down'))
-        short_press_desc = "Dim down (hold to dim)"
+        # Resolve zone/room for dimming if specified
+        where_rid, where_rtype, where_name = None, None, None
+        if where:
+            # Try zones first - prefer exact matches
+            zones = cache_controller.get_zones()
+            exact_match = None
+            substring_match = None
+
+            for zone in zones:
+                zone_name = zone.get('metadata', {}).get('name', '')
+                if where.lower() == zone_name.lower():
+                    exact_match = (zone['id'], 'zone', zone_name)
+                    break
+                elif where.lower() in zone_name.lower() and not substring_match:
+                    substring_match = (zone['id'], 'zone', zone_name)
+
+            if exact_match:
+                where_rid, where_rtype, where_name = exact_match
+            elif substring_match:
+                where_rid, where_rtype, where_name = substring_match
+
+            # Try rooms if not found in zones
+            if not where_rid:
+                rooms = cache_controller.get_rooms()
+                exact_match = None
+                substring_match = None
+
+                for room in rooms:
+                    room_name = room.get('metadata', {}).get('name', '')
+                    if where.lower() == room_name.lower():
+                        exact_match = (room['id'], 'room', room_name)
+                        break
+                    elif where.lower() in room_name.lower() and not substring_match:
+                        substring_match = (room['id'], 'room', room_name)
+
+                if exact_match:
+                    where_rid, where_rtype, where_name = exact_match
+                elif substring_match:
+                    where_rid, where_rtype, where_name = substring_match
+
+            if not where_rid:
+                click.secho(f"✗ Zone/room '{where}' not found", fg='red')
+                return
+
+        button_config.update(build_dimming_config('dim_down', where_rid, where_rtype))
+        short_press_desc = f"Dim down (hold to dim){f' - {where_name}' if where_name else ''}"
 
     # Handle long press action
     if long_press:
