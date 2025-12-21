@@ -248,69 +248,35 @@ def program_button_command(switch_name, button_number, scenes, time_based, slot,
         all_switches = get_all_switch_names(cache_controller)
 
         if not any(switch_name.lower() in s.lower() for s in all_switches):
-            # No programmed switches match - check if unprogrammed device exists
-            from models.button_config import create_initial_behaviour_for_device
+            # No programmed switches match
+            click.secho(f"✗ Switch '{switch_name}' not found", fg='red')
 
+            # Check if it exists as an unprogrammed device
             devices = cache_controller.get_devices()
             matching_devices = [
                 d for d in devices
                 if switch_name.lower() in d.get('metadata', {}).get('name', '').lower()
             ]
 
-            if len(matching_devices) == 1:
-                # Found unprogrammed device - create initial behaviour
-                device = matching_devices[0]
-                device_name = device.get('metadata', {}).get('name', '')
-
-                click.secho(f"\n⚠ '{device_name}' has not been programmed yet", fg='yellow')
-                click.echo("Creating initial behaviour instance...")
-                click.echo()
-
-                # Create a write controller for the initial behaviour
-                write_controller = HueController()
-                if not write_controller.connect():
-                    return
-
-                new_behaviour_id = create_initial_behaviour_for_device(device, write_controller)
-                if not new_behaviour_id:
-                    return  # Error already displayed
-
-                # Reload cache to get the new behaviour
-                click.echo("Reloading cache...")
-                cache_controller.reload_all_data()
-
-                # Try finding the switch again
-                result = find_switch_behaviour(switch_name, cache_controller)
-                if not result:
-                    click.secho("\n✗ Failed to find newly created behaviour", fg='red')
-                    return
-
-                click.echo()
-            elif len(matching_devices) > 1:
-                # Multiple unprogrammed devices match
-                click.secho(f"✗ Multiple devices match '{switch_name}':", fg='red')
-                for d in matching_devices:
-                    name = d.get('metadata', {}).get('name', '')
-                    click.secho(f"  • {name}", fg='yellow')
-                click.echo("\nPlease be more specific.")
+            if matching_devices:
+                device_name = matching_devices[0].get('metadata', {}).get('name', '')
+                click.echo(f"\n'{device_name}' exists but hasn't been programmed yet.")
+                click.echo("Please use the Hue app to set up initial button configuration, then use this tool to modify it.")
                 return
+
+            # No unprogrammed device either - show similar switches
+            similar = find_similar_strings(switch_name, all_switches, limit=3)
+            if similar:
+                click.echo("\nDid you mean one of these?")
+                for name in similar:
+                    click.secho(f"  • {name}", fg='green')
             else:
-                # No matches at all
-                click.secho(f"✗ Switch '{switch_name}' not found", fg='red')
-
-                # Show similar switches
-                similar = find_similar_strings(switch_name, all_switches, limit=3)
-                if similar:
-                    click.echo("\nDid you mean one of these?")
-                    for name in similar:
-                        click.secho(f"  • {name}", fg='green')
-                else:
-                    click.echo("\nAvailable switches:")
-                    for name in all_switches[:10]:
-                        click.secho(f"  • {name}", fg='green')
-                    if len(all_switches) > 10:
-                        click.echo(f"  ... and {len(all_switches) - 10} more")
-                return
+                click.echo("\nAvailable switches:")
+                for name in all_switches[:10]:
+                    click.secho(f"  • {name}", fg='green')
+                if len(all_switches) > 10:
+                    click.echo(f"  ... and {len(all_switches) - 10} more")
+            return
         else:
             # Multiple programmed switches match
             matches = [s for s in all_switches if switch_name.lower() in s.lower()]
