@@ -76,13 +76,36 @@ def program_zone_switch_command(zone_name, switch_name, button, scene_names_str,
     # Step 3: Find switch/device
     click.echo(f"\nLooking for switch: {switch_name}")
     behaviours = controller.get_behaviour_instances()
+    devices = controller.get_devices()
     switch_behaviour = None
 
+    # First try to find by behaviour name
     for behaviour in behaviours:
         behaviour_name = behaviour.get('metadata', {}).get('name', '')
         if switch_name.lower() in behaviour_name.lower():
             switch_behaviour = behaviour
             break
+
+    # If not found by name, try to find device by name, then find its behaviour
+    if not switch_behaviour:
+        click.echo(f"  Not found by behaviour name, searching devices...")
+        target_device = None
+        for device in devices:
+            device_name = device.get('metadata', {}).get('name', '')
+            if switch_name.lower() in device_name.lower():
+                target_device = device
+                click.echo(f"  Found device: {device_name}")
+                break
+
+        if target_device:
+            device_id = target_device.get('id')
+            # Find behaviour that references this device
+            for behaviour in behaviours:
+                config = behaviour.get('configuration', {})
+                if config.get('device', {}).get('rid') == device_id:
+                    switch_behaviour = behaviour
+                    click.echo(f"  Found behaviour for device: {behaviour.get('metadata', {}).get('name', 'Unknown')}")
+                    break
 
     if not switch_behaviour:
         click.secho(f"✗ Switch '{switch_name}' not found", fg='red')
