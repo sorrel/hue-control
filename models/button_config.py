@@ -444,10 +444,11 @@ def update_button_configuration(behaviour: dict, button_number: int,
 
 # ===== Argument Validation =====
 
-def validate_program_button_args(scenes, time_based, slot, scene, dim_up, dim_down, long_press):
+def validate_program_button_args(button_number, scenes, time_based, slot, scene, dim_up, dim_down, long_press):
     """Validate command arguments for conflicts and requirements.
 
     Args:
+        button_number: Button number (1-4)
         scenes: --scenes option value
         time_based: --time-based flag value
         slot: --slot option values (tuple)
@@ -480,8 +481,10 @@ def validate_program_button_args(scenes, time_based, slot, scene, dim_up, dim_do
     ])
 
     # Validation rules
+    # For buttons 2 and 3 (physical dim buttons), action is optional (auto-detected)
     if short_press_actions == 0 and not long_press:
-        return False, "Must specify at least one action (--scenes, --scene, --dim-up, --dim-down, or --long-press)"
+        if button_number not in [2, 3]:
+            return False, "Must specify at least one action (--scenes, --scene, or --long-press)"
 
     if short_press_actions > 1:
         return False, "Cannot specify multiple short-press actions. Choose one: --scenes, --time-based, --scene, --dim-up, or --dim-down"

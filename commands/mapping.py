@@ -197,13 +197,13 @@ def program_button_command(switch_name, button_number, scenes, time_based, slot,
       uv run python hue_backup.py program-button "Bedroom dimmer" 4 \\
         --scene "Relax"
 
-      # Dimming actions
-      uv run python hue_backup.py program-button "Office dimmer" 2 --dim-up
-      uv run python hue_backup.py program-button "Office dimmer" 3 --dim-down
+      # Dimming actions (--dim-up/--dim-down are optional, auto-detected for buttons 2/3)
+      uv run python hue_backup.py program-button "Office dimmer" 2
+      uv run python hue_backup.py program-button "Office dimmer" 3
 
       # Dimming with zone control (change which lights the dim buttons control)
-      uv run python hue_backup.py program-button "Office dimmer" 2 --dim-up --where "Upstairs"
-      uv run python hue_backup.py program-button "Office dimmer" 3 --dim-down --where "Upstairs"
+      uv run python hue_backup.py program-button "Office dimmer" 2 --where "Upstairs"
+      uv run python hue_backup.py program-button "Office dimmer" 3 --where "Upstairs"
 
       # Long press
       uv run python hue_backup.py program-button "Office dimmer" 1 \\
@@ -217,23 +217,29 @@ def program_button_command(switch_name, button_number, scenes, time_based, slot,
     )
     from models.utils import find_similar_strings
 
-    # 1. Validate arguments
+    # 1. Auto-detect dim action for buttons 2 and 3 if not specified
+    if button_number == 2 and not any([scenes, time_based, scene, dim_up, dim_down]):
+        dim_up = True
+    elif button_number == 3 and not any([scenes, time_based, scene, dim_up, dim_down]):
+        dim_down = True
+
+    # 2. Validate arguments
     is_valid, error_msg = validate_program_button_args(
-        scenes, time_based, slot, scene, dim_up, dim_down, long_press
+        button_number, scenes, time_based, slot, scene, dim_up, dim_down, long_press
     )
     if not is_valid:
         click.secho(f"✗ {error_msg}", fg='red')
         click.echo("\nRun 'program-button --help' for usage information")
         return
 
-    # 2. Connect to bridge (cache for reading)
+    # 3. Connect to bridge (cache for reading)
     cache_controller = HueController(use_cache=True)
     if auto_reload:
         if not cache_controller.ensure_fresh_cache():
             click.echo("Failed to ensure fresh cache.")
             return
 
-    # 3. Find switch behaviour instance
+    # 4. Find switch behaviour instance
     if (result := find_switch_behaviour(switch_name, cache_controller)) is None:
         # Check if no matches or multiple matches
         all_switches = get_all_switch_names(cache_controller)
@@ -317,7 +323,7 @@ def program_button_command(switch_name, button_number, scenes, time_based, slot,
     device = result['device']
     instance_id = behaviour['id']
 
-    # 4. Build button configuration based on action type
+    # 5. Build button configuration based on action type
     button_config = {}
     short_press_desc = None
     long_press_desc = None
@@ -483,7 +489,7 @@ def program_button_command(switch_name, button_number, scenes, time_based, slot,
             button_config.update(build_long_press_config(long_press, lp_scene_ids[0]))
             long_press_desc = f"Activate scene: {long_press}"
 
-    # 5. Show confirmation preview
+    # 6. Show confirmation preview
     button_labels = {1: 'ON', 2: 'DIM UP', 3: 'DIM DOWN', 4: 'OFF'}
     button_label = button_labels.get(button_number, str(button_number))
 
@@ -513,7 +519,7 @@ def program_button_command(switch_name, button_number, scenes, time_based, slot,
             click.echo("Cancelled.")
             return
 
-    # 6. Update behaviour instance with write-through cache
+    # 7. Update behaviour instance with write-through cache
     write_controller = HueController()  # Non-cache for writes
     if not write_controller.connect():
         return
