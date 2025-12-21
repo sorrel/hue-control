@@ -77,6 +77,9 @@ from commands.mapping import (
 from commands.zone_programming import (
     program_zone_switch_command
 )
+from commands.scene_management import (
+    duplicate_scene_command
+)
 
 # Disable SSL warnings for self-signed certificate
 requests.packages.urllib3.disable_warnings(InsecureRequestWarning)
@@ -385,6 +388,9 @@ cli.add_command(program_button_command, name='program-button')
 
 # Zone programming commands
 cli.add_command(program_zone_switch_command, name='program-zone-switch')
+
+# Scene management commands
+cli.add_command(duplicate_scene_command, name='duplicate-scene')
 
 
 if __name__ == '__main__':
