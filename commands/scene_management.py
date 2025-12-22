@@ -13,8 +13,9 @@ from models.utils import create_name_lookup, create_scene_reverse_lookup
 @click.option('--turn-off', multiple=True, help='Light name to turn OFF in the new scene (can be used multiple times)')
 @click.option('--brightness', multiple=True, help='Set brightness: "LightName=50%" (can be used multiple times)')
 @click.option('--remove-light', multiple=True, help='Remove a light from the scene (can be used multiple times)')
+@click.option('--zone', '-z', help='Filter by zone/room name (disambiguates scenes with same name)')
 @click.option('--yes', '-y', is_flag=True, help='Skip confirmation prompt')
-def duplicate_scene_command(source_scene, new_name, turn_on, turn_off, brightness, remove_light, yes):
+def duplicate_scene_command(source_scene, new_name, turn_on, turn_off, brightness, remove_light, zone, yes):
     """Duplicate a scene with modifications.
 
     Creates a copy of an existing scene with optional modifications like turning
@@ -52,31 +53,64 @@ def duplicate_scene_command(source_scene, new_name, turn_on, turn_off, brightnes
         for l in lights
     }
 
-    # Find source scene (fuzzy match)
+    # Find source scene (fuzzy match with optional zone filter)
     source_scene_lower = source_scene.lower()
     source_id = None
     source_obj = None
 
+    # Build candidate list (filter by zone if specified)
+    candidates = scenes
+    if zone:
+        zone_lower = zone.lower()
+        # Get rooms and zones to match zone name
+        rooms = controller.get_rooms()
+        zones_list = controller.get_zones()
+        all_groups = rooms + zones_list
+
+        # Find matching room/zone
+        matching_groups = [g for g in all_groups if zone_lower in g.get('metadata', {}).get('name', '').lower()]
+        if len(matching_groups) == 0:
+            click.secho(f"✗ Zone '{zone}' not found", fg='red')
+            return
+        elif len(matching_groups) > 1:
+            click.secho(f"✗ Multiple zones match '{zone}':", fg='red')
+            for g in matching_groups:
+                click.secho(f"  • {g.get('metadata', {}).get('name')}", fg='yellow')
+            return
+
+        zone_rid = matching_groups[0]['id']
+        # Filter scenes by this zone
+        candidates = [s for s in scenes if s.get('group', {}).get('rid') == zone_rid]
+
     # Try exact match first
-    if source_scene_lower in scene_reverse_lookup:
-        source_id = scene_reverse_lookup[source_scene_lower]
+    exact_matches = [s for s in candidates if s.get('metadata', {}).get('name', '').lower() == source_scene_lower]
+    if len(exact_matches) == 1:
+        source_obj = exact_matches[0]
+    elif len(exact_matches) > 1:
+        click.secho(f"✗ Multiple scenes exactly match '{source_scene}':", fg='red')
+        for s in exact_matches:
+            group_name = s.get('group', {}).get('rid', 'unknown')[:8]
+            click.secho(f"  • {s.get('metadata', {}).get('name')} [{group_name}...]", fg='yellow')
+        click.echo("\nUse --zone to specify which zone.")
+        return
     else:
         # Try partial match
-        matches = [(name, sid) for name, sid in scene_reverse_lookup.items() if source_scene_lower in name]
-        if len(matches) == 1:
-            source_id = matches[0][1]
-        elif len(matches) > 1:
+        partial_matches = [s for s in candidates if source_scene_lower in s.get('metadata', {}).get('name', '').lower()]
+        if len(partial_matches) == 1:
+            source_obj = partial_matches[0]
+        elif len(partial_matches) > 1:
             click.secho(f"✗ Multiple scenes match '{source_scene}':", fg='red')
-            for name, _ in matches:
-                click.secho(f"  • {name}", fg='yellow')
-            click.echo("\nPlease be more specific.")
+            for s in partial_matches:
+                group_name = s.get('group', {}).get('rid', 'unknown')[:8]
+                click.secho(f"  • {s.get('metadata', {}).get('name')} [{group_name}...]", fg='yellow')
+            click.echo("\nUse --zone to specify which zone.")
             return
         else:
             click.secho(f"✗ Scene '{source_scene}' not found", fg='red')
+            if zone:
+                click.secho(f"  (searched in zone: {zone})", fg='yellow')
             return
 
-    # Get the source scene object
-    source_obj = next((s for s in scenes if s['id'] == source_id), None)
     if not source_obj:
         click.secho(f"✗ Could not find scene data", fg='red')
         return
