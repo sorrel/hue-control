@@ -229,7 +229,7 @@ class HueController:
                 if hasattr(e, 'response') and e.response is not None:
                     error_body = e.response.text
                     click.echo(f"Response body: {error_body}", err=True)
-            except:
+            except (AttributeError, Exception):
                 pass
             return None
 
