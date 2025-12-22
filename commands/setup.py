@@ -10,6 +10,7 @@ from pathlib import Path
 
 import click
 from core.config import CONFIG_FILE
+from models.utils import similarity_score
 
 
 @dataclass(frozen=True)
@@ -64,37 +65,12 @@ class ColouredGroup(click.Group):
         return [cmd for score, cmd in suggestions[:max_suggestions]]
 
     def _similarity_score(self, s1, s2):
-        """Calculate similarity score between two strings."""
-        # Exact match
-        if s1 == s2:
-            return 100
+        """Calculate similarity score between two strings.
 
-        # Prefix match (high score)
-        if s2.startswith(s1) or s1.startswith(s2):
-            return 80
-
-        # Contains match
-        if s1 in s2 or s2 in s1:
-            return 60
-
-        # Levenshtein-like distance (simple version)
-        # Count matching characters in order
-        matches = 0
-        j = 0
-        for i, char in enumerate(s1):
-            while j < len(s2):
-                if s2[j] == char:
-                    matches += 1
-                    j += 1
-                    break
-                j += 1
-
-        # Score based on proportion of matches
-        if matches > 0:
-            score = int((matches / max(len(s1), len(s2))) * 50)
-            return score if score > 20 else 0
-
-        return 0
+        This method delegates to the canonical similarity_score() function
+        in models.utils to ensure consistent fuzzy matching across the application.
+        """
+        return similarity_score(s1, s2)
 
     def format_help(self, ctx, formatter):
         """Format help with colours."""
