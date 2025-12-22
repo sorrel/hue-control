@@ -9,7 +9,7 @@ def test_directories_exist(project_root):
     assert (project_root / "models").exists()
     assert (project_root / "commands").exists()
     assert (project_root / "tests").exists()
-    assert (project_root / "cache").exists()
+    assert (project_root / "cache.nosync").exists()
 
 
 def test_init_files_exist(project_root):

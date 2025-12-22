@@ -50,7 +50,7 @@ def save_room_command(room_name: str, auto_reload: bool):
       uv run python hue_backup.py save-room "Living"
       uv run python hue_backup.py save-room "Bedroom D"
 
-    Files are saved to: cache/saved-rooms/YYYY-MM-DD_HH-MM_RoomName.json
+    Files are saved to: saved-rooms/YYYY-MM-DD_HH-MM_RoomName.json
     """
     cache_controller = get_cache_controller(auto_reload)
     if not cache_controller:
@@ -112,7 +112,7 @@ def diff_room_command(saved_file: str, verbose: bool, reload: bool, auto_reload:
     \b
     Examples:
       # Compare with specific file
-      uv run python hue_backup.py diff-room cache/saved-rooms/2025-12-10_13-46_Living_room.json
+      uv run python hue_backup.py diff-room saved-rooms/2025-12-10_13-46_Living_room.json
 
       # Use room name - finds most recent backup for that room
       uv run python hue_backup.py diff-room "Living"
@@ -122,7 +122,7 @@ def diff_room_command(saved_file: str, verbose: bool, reload: bool, auto_reload:
       uv run python hue_backup.py diff-room "Living" --reload
 
       # Most recent file of any room
-      uv run python hue_backup.py diff-room $(ls -t cache/saved-rooms/*.json | head -1)
+      uv run python hue_backup.py diff-room $(ls -t saved-rooms/*.json | head -1)
     """
     # Force reload if requested
     if reload:
@@ -329,7 +329,7 @@ def restore_room_command(saved_file: str, yes: bool):
     \b
     Examples:
       # Restore with specific file
-      uv run python hue_backup.py restore-room cache/saved-rooms/2025-12-13_16-13_Living_room.json
+      uv run python hue_backup.py restore-room saved-rooms/2025-12-13_16-13_Living_room.json
 
       # Use room name - finds most recent backup for that room
       uv run python hue_backup.py restore-room "Living"

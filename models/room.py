@@ -14,7 +14,7 @@ if TYPE_CHECKING:
     from hue_backup import HueController
 
 # Constants
-SAVED_ROOMS_DIR = Path(__file__).parent.parent / 'cache' / 'saved-rooms'
+SAVED_ROOMS_DIR = Path(__file__).parent.parent / 'saved-rooms'
 
 
 def save_room_configuration(controller: 'HueController', room_name: str) -> str | None:

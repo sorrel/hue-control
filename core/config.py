@@ -11,7 +11,7 @@ import subprocess
 from pathlib import Path
 
 # Configuration file paths
-CONFIG_FILE = Path(__file__).parent.parent / 'cache' / 'hue_data.json'
+CONFIG_FILE = Path(__file__).parent.parent / 'cache.nosync' / 'hue_data.json'
 USER_CONFIG_FILE = Path.home() / '.hue_backup' / 'config.json'
 
 
