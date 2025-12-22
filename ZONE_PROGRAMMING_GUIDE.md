@@ -192,7 +192,7 @@ If something goes wrong:
 uv run python hue_backup.py restore-room "Living room" -y
 
 # Or restore from specific file
-uv run python hue_backup.py restore-room cache/saved-rooms/2025-12-19_13-25_Living_room.json -y
+uv run python hue_backup.py restore-room saved-rooms/2025-12-19_13-25_Living_room.json -y
 ```
 
 ## Example Session
