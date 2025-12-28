@@ -205,13 +205,13 @@ class HueController:
 
         try:
             if method == 'GET':
-                response = self.session.get(url, headers=headers, timeout=5)
+                response = self.session.get(url, headers=headers, timeout=5, verify=False)
             elif method == 'PUT':
-                response = self.session.put(url, headers=headers, json=data, timeout=5)
+                response = self.session.put(url, headers=headers, json=data, timeout=5, verify=False)
             elif method == 'POST':
-                response = self.session.post(url, headers=headers, json=data, timeout=5)
+                response = self.session.post(url, headers=headers, json=data, timeout=5, verify=False)
             elif method == 'DELETE':
-                response = self.session.delete(url, headers=headers, timeout=5)
+                response = self.session.delete(url, headers=headers, timeout=5, verify=False)
             else:
                 return None
 
