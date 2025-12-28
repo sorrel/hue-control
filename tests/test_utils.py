@@ -115,6 +115,40 @@ class TestCreateNameLookup:
         assert result['light-1'] == 'Unknown'
 
 
+class TestGetResourceName:
+    """Tests for get_resource_name function."""
+
+    def test_with_name(self):
+        """Resource with metadata.name should return the name."""
+        from models.utils import get_resource_name
+        resource = {'id': 'light-1', 'metadata': {'name': 'Living Room Lamp'}}
+        assert get_resource_name(resource) == 'Living Room Lamp'
+
+    def test_missing_metadata(self):
+        """Resource without metadata should return default."""
+        from models.utils import get_resource_name
+        resource = {'id': 'light-1'}
+        assert get_resource_name(resource) == 'Unknown'
+
+    def test_empty_metadata(self):
+        """Resource with empty metadata should return default."""
+        from models.utils import get_resource_name
+        resource = {'id': 'light-1', 'metadata': {}}
+        assert get_resource_name(resource) == 'Unknown'
+
+    def test_custom_default(self):
+        """Should use custom default when provided."""
+        from models.utils import get_resource_name
+        resource = {'id': 'light-1'}
+        assert get_resource_name(resource, 'N/A') == 'N/A'
+
+    def test_empty_string_name(self):
+        """Resource with empty string name should return empty string (not default)."""
+        from models.utils import get_resource_name
+        resource = {'id': 'light-1', 'metadata': {'name': ''}}
+        assert get_resource_name(resource) == ''
+
+
 class TestCreateSceneReverseLookup:
     """Tests for create_scene_reverse_lookup function."""
 

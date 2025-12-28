@@ -12,7 +12,7 @@ import time
 from datetime import datetime, timedelta
 from pathlib import Path
 
-from core.config import load_config, save_config, load_from_1password
+from core.config import load_config, save_config
 from core.cache import reload_cache, is_cache_stale, ensure_fresh_cache, get_cache_info
 from models.utils import create_name_lookup
 
@@ -94,6 +94,27 @@ class HueController:
         setattr(self, resource_type, result if result else [])
         return getattr(self, resource_type)
 
+    def _get_cache_items(self, resource_type: str) -> tuple[dict, list] | None:
+        """Get cache dict and items list for a resource type.
+
+        This helper extracts common validation from cache entry methods.
+
+        Args:
+            resource_type: The cache key (e.g., 'lights', 'scenes', 'behaviours')
+
+        Returns:
+            Tuple of (cache_dict, items_list), or None if cache unavailable
+        """
+        if not self.use_cache:
+            return None
+
+        cache = self.config.get('cache', {})
+        if not cache:
+            return None
+
+        items = cache.get(resource_type, [])
+        return cache, items
+
     def _update_cache_entry(self, resource_type: str, resource_id: str, new_data: dict) -> bool:
         """Update a single entry in the persistent cache (write-through cache pattern).
 
@@ -109,31 +130,24 @@ class HueController:
         Returns:
             True if cache was updated, False if cache doesn't exist or resource not found
         """
-        if not self.use_cache:
+        result = self._get_cache_items(resource_type)
+        if not result:
             return False
 
-        cache = self.config.get('cache', {})
-        if not cache:
-            return False
-
-        items = cache.get(resource_type, [])
+        cache, items = result
         if not items:
             return False
 
         # Find and update the resource
-        updated = False
         for i, item in enumerate(items):
             if item.get('id') == resource_id:
                 items[i] = new_data
-                updated = True
-                break
+                cache[resource_type] = items
+                self.config['cache'] = cache
+                save_config(self.config)
+                return True
 
-        if updated:
-            cache[resource_type] = items
-            self.config['cache'] = cache
-            save_config(self.config)
-
-        return updated
+        return False
 
     def _add_cache_entry(self, resource_type: str, new_data: dict) -> bool:
         """Add a new entry to the persistent cache (for POST/create operations).
@@ -145,14 +159,11 @@ class HueController:
         Returns:
             True if cache was updated, False if cache doesn't exist
         """
-        if not self.use_cache:
+        result = self._get_cache_items(resource_type)
+        if not result:
             return False
 
-        cache = self.config.get('cache', {})
-        if not cache:
-            return False
-
-        items = cache.get(resource_type, [])
+        cache, items = result
         items.append(new_data)
 
         cache[resource_type] = items
@@ -171,14 +182,11 @@ class HueController:
         Returns:
             True if cache was updated, False if cache doesn't exist or resource not found
         """
-        if not self.use_cache:
+        result = self._get_cache_items(resource_type)
+        if not result:
             return False
 
-        cache = self.config.get('cache', {})
-        if not cache:
-            return False
-
-        items = cache.get(resource_type, [])
+        cache, items = result
         if not items:
             return False
 

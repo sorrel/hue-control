@@ -4,6 +4,7 @@ This module contains helper functions used across the application:
 - display_width: Calculate terminal display width for Unicode/emojis
 - decode_button_event: Convert button event codes to human-readable format
 - create_name_lookup: Build ID-to-name mappings for resources
+- get_resource_name: Extract name from resource metadata
 - get_controller: Helper to create fresh connected controllers
 - get_cache_controller: Helper to create cache-enabled controllers
 - similarity_score: Canonical fuzzy string matching algorithm
@@ -109,6 +110,22 @@ def create_name_lookup(resources: list[dict]) -> dict[str, str]:
         Dict mapping resource ID to name
     """
     return {r['id']: r.get('metadata', {}).get('name', 'Unknown') for r in resources}
+
+
+def get_resource_name(resource: dict, default: str = 'Unknown') -> str:
+    """Extract name from a Hue resource's metadata.
+
+    This is the canonical way to get a resource name across the application.
+    Replaces the common pattern: resource.get('metadata', {}).get('name', 'Unknown')
+
+    Args:
+        resource: A v2 API resource dict with optional 'metadata.name' field
+        default: Default value if name not found
+
+    Returns:
+        The resource name, or the default value
+    """
+    return resource.get('metadata', {}).get('name', default)
 
 
 def get_controller():

@@ -6,38 +6,14 @@ Back up and restore Philips Hue switch configurations and room settings.
 
 import click
 import os
-import sys
 import requests
 from requests.packages.urllib3.exceptions import InsecureRequestWarning
 
 # Import utility functions from models
-from models.utils import display_width, decode_button_event, create_name_lookup, get_cache_controller
-
-# Import configuration functions from core
-from core.config import (
-    CONFIG_FILE,
-    load_config,
-    save_config,
-    load_from_1password
-)
-
-# Import cache management functions from core
-from core.cache import (
-    reload_cache,
-    is_cache_stale,
-    ensure_fresh_cache,
-    get_cache_info
-)
+from models.utils import get_cache_controller
 
 # Import HueController from core
 from core.controller import HueController
-
-# Import room management functions
-from models.room import (
-    save_room_configuration,
-    diff_room_configuration,
-    SAVED_ROOMS_DIR
-)
 
 # Import commands from command modules
 from commands.setup import ColouredGroup, help_command, setup_command, configure_command
@@ -53,7 +29,6 @@ from commands.inspection import (
     switches_command,
     debug_buttons_command,
     button_data_command,
-    bridge_auto_command,
     switch_status_command,
     switch_info_command,
     plugs_command,
@@ -366,7 +341,6 @@ cli.add_command(scenes_command, name='scenes')
 cli.add_command(switches_command, name='switches')
 cli.add_command(debug_buttons_command, name='debug-buttons')
 cli.add_command(button_data_command, name='button-data')
-cli.add_command(bridge_auto_command, name='bridge-auto')
 cli.add_command(switch_status_command, name='switch-status')
 cli.add_command(switch_info_command, name='switch-info')
 cli.add_command(plugs_command, name='plugs')

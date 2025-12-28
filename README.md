@@ -251,8 +251,8 @@ commands/                # CLI commands
       ├── scenes.py      # Scene inspection (1 command)
       ├── status.py      # Status/overview (3 commands)
       ├── devices.py     # Device listing (4 commands)
-      └── switches.py    # Switch inspection (6 commands)
-tests/                   # 127 tests, all mocked
+      └── switches.py    # Switch inspection (5 commands)
+tests/                   # 135 tests, all mocked
   ├── test_button_config.py  # Button configuration tests
   ├── test_inspection.py     # Inspection command tests
   └── test_utils.py      # Utility function tests
@@ -266,7 +266,7 @@ cache/                   # Local cache (gitignored)
 # Install dependencies with dev extras (includes pytest)
 uv sync --extra dev
 
-# Run all tests (127 total, all passing)
+# Run all tests (135 total, all passing)
 uv run pytest -v
 
 # Run specific test file
@@ -275,7 +275,7 @@ uv run pytest tests/test_inspection.py -v
 ```
 
 **Test Coverage:**
-- Over 100 tests
+- 135 tests
 - All tests use mocks (no actual API calls or file writes)
 - Test files:
   - `test_structure.py` - Directory and file structure
