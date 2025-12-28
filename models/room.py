@@ -10,7 +10,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 import click
 
-from models.utils import extract_room_rids_from_behaviour
+from models.utils import extract_room_rids_from_behaviour, BUTTON_KEYS_OLD_FORMAT
 
 if TYPE_CHECKING:
     from hue_backup import HueController
@@ -357,8 +357,8 @@ def _diff_button_configuration(saved_config: dict, current_config: dict, verbose
     if scene_lookup is None:
         scene_lookup = {}
 
-    # Check old format buttons (button1, button2, button3, button4)
-    for button_key in ['button1', 'button2', 'button3', 'button4', 'rotary']:
+    # Check old format buttons (button1, button2, button3, button4, rotary)
+    for button_key in BUTTON_KEYS_OLD_FORMAT:
         saved_button = saved_config.get(button_key, {})
         current_button = current_config.get(button_key, {})
 
